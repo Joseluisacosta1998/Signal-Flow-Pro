@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SignalFlow · Backtest</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#08090d">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--bg:#08090d;--s1:#0e1018;--s2:#13161f;--s3:#1a1e2a;--border:#1f2435;--border2:#262c3d;--long:#00e5a0;--long-dim:rgba(0,229,160,0.1);--short:#ff4466;--short-dim:rgba(255,68,102,0.1);--neutral:#f5a623;--neutral-dim:rgba(245,166,35,0.1);--text:#e2e8f4;--muted:#5a6278;--muted2:#3d4358;--accent:#5b6ef5;--accent2:#7c8cf8;--mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}html{font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:48px;}
+/* HEADER */
+.header{padding:14px 16px 10px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:100;}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.logo{display:flex;align-items:center;gap:8px;min-width:0;}
+.logo-icon{width:26px;height:26px;background:linear-gradient(135deg,var(--accent),#9b6ef5);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.logo-text{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;white-space:nowrap;}
+.logo-text span{color:var(--accent2);}
+.header-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.nav-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--s3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;white-space:nowrap;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent2);}
+.header-sub{margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.5px;}
+/* FILTER CHIPS */
+.filter-bar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--s1);}
+.filter-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.combo-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.combo-chip{padding:5px 10px;background:var(--s3);border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.combo-chip:hover{border-color:var(--accent2);color:var(--accent2);}
+.combo-chip.active{background:rgba(91,110,245,.12);border-color:var(--accent);color:var(--accent2);}
+.combo-chip.active.c0{background:rgba(91,110,245,.12);border-color:var(--accent);color:var(--accent2);}
+.combo-chip.active.c1{background:rgba(91,110,245,.1);border-color:var(--accent);color:var(--accent2);}
+.combo-chip.active.c2{background:rgba(245,166,35,.1);border-color:var(--neutral);color:var(--neutral);}
+.combo-chip.active.c3{background:rgba(0,180,255,.1);border-color:#00b4ff;color:#00b4ff;}
+.combo-chip.active.c4{background:rgba(255,100,68,.1);border-color:#ff6444;color:#ff6444;}
+.combo-chip.active.c5{background:rgba(0,229,160,.1);border-color:var(--long);color:var(--long);}
+.combo-chip.active.c6{background:rgba(91,110,245,.16);border-color:var(--accent);color:var(--accent2);}
+/* PERIOD BAR */
+.period-bar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--s1);}
+.custom-range{display:none;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;}
+.custom-range.show{display:flex;}
+.custom-range input[type="date"]{background:var(--s3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;padding:5px 8px;}
+.custom-range span{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.custom-range button{padding:5px 10px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;}
+/* MAIN */
+.main{padding:14px 16px;}
+.section-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:18px;}
+.section-eyebrow:first-child{margin-top:0;}
+/* SUMMARY CARDS */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.summary-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 13px;}
+.summary-card-label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.summary-card-val{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1;}
+.summary-card-val.long{color:var(--long);}
+.summary-card-val.short{color:var(--short);}
+.summary-card-val.neutral{color:var(--neutral);}
+.summary-card-sub{font-size:9px;color:var(--muted);margin-top:4px;}
+/* WIN RATE BAR */
+.wr-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:8px;}
+.wr-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+.wr-title{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.wr-pct{font-family:var(--mono);font-size:18px;font-weight:700;}
+.wr-bar-wrap{height:8px;background:var(--border2);border-radius:5px;overflow:hidden;display:flex;}
+.wr-bar-win{background:linear-gradient(90deg,rgba(0,229,160,.5),var(--long));height:100%;}
+.wr-bar-loss{background:linear-gradient(90deg,var(--short),rgba(255,68,102,.5));height:100%;}
+/* TABLE */
+.bt-table{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.bt-row{display:grid;grid-template-columns:1.6fr .7fr .7fr .9fr;gap:6px;padding:9px 12px;border-bottom:1px solid var(--border);align-items:center;}
+.bt-row:last-child{border-bottom:none;}
+.bt-row.head{background:var(--s2);}
+.bt-row.head span{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.bt-name{font-family:var(--mono);font-size:10px;font-weight:700;display:flex;align-items:center;gap:5px;min-width:0;}
+.bt-num{font-family:var(--mono);font-size:10px;text-align:right;color:var(--text);}
+.bt-wr{font-family:var(--mono);font-size:10px;font-weight:700;text-align:right;}
+.bt-wr.good{color:var(--long);}
+.bt-wr.bad{color:var(--short);}
+.bt-wr.mid{color:var(--neutral);}
+/* TRADE LIST */
+.trade-list{display:flex;flex-direction:column;gap:7px;}
+.trade-item{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:10px 12px;}
+.trade-item.win{border-color:rgba(0,229,160,.25);}
+.trade-item.loss{border-color:rgba(255,68,102,.25);}
+.trade-item.open{border-color:var(--border2);background:rgba(245,166,35,.03);}
+.trade-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.trade-id{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;}
+.trade-dir{padding:1px 7px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.5px;}
+.trade-dir.LONG{background:var(--long-dim);color:var(--long);}
+.trade-dir.SHORT{background:var(--short-dim);color:var(--short);}
+.trade-combo{font-family:var(--mono);font-size:8px;color:var(--muted);padding:1px 6px;background:var(--s2);border-radius:4px;}
+.trade-result{font-family:var(--mono);font-size:11px;font-weight:700;}
+.trade-result.win{color:var(--long);}
+.trade-result.loss{color:var(--short);}
+.trade-result.open{color:var(--neutral);}
+.trade-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted);flex-wrap:wrap;gap:4px;}
+.trade-meta b{color:var(--text);font-weight:600;}
+/* EMPTY */
+.empty-state{text-align:center;padding:60px 20px;}
+.empty-icon{font-size:38px;margin-bottom:10px;opacity:.5;}
+.empty-title{font-size:14px;font-weight:600;margin-bottom:6px;}
+.empty-sub{font-size:11px;color:var(--muted);line-height:1.6;}
+.note-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:4px;}
+.note-box b{color:var(--text);}
+
+/* ── SIMULATION PANEL ── */
+.sim-panel{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--s1);}
+.sim-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sim-group{display:flex;flex-direction:column;gap:6px;}
+.sim-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.sim-chips{display:flex;gap:5px;flex-wrap:wrap;}
+.sim-chip{padding:5px 9px;background:var(--s3);border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.sim-chip:hover{border-color:var(--accent2);color:var(--accent2);}
+.sim-chip.active{background:rgba(91,110,245,.14);border-color:var(--accent);color:var(--accent2);}
+.sim-custom-row{display:flex;gap:6px;align-items:center;margin-top:4px;}
+.sim-input{background:var(--s3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:11px;font-weight:700;padding:5px 8px;width:100%;outline:none;transition:border-color .2s;}
+.sim-input:focus{border-color:var(--accent);}
+.sim-input-prefix{font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;}
+
+/* ── EQUITY CHART ENHANCED ── */
+.equity-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.equity-header{padding:12px 14px 0;display:flex;justify-content:space-between;align-items:flex-start;}
+.equity-title{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.equity-return{font-family:var(--mono);font-size:16px;font-weight:700;}
+.equity-chart-wrap{padding:0 0 0;margin-top:4px;position:relative;}
+.equity-svg-wrap{width:100%;overflow:hidden;}
+.equity-footer{padding:10px 14px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--border);}
+.equity-stat{display:flex;flex-direction:column;gap:3px;}
+.equity-stat-label{font-family:var(--mono);font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.equity-stat-val{font-family:var(--mono);font-size:11px;font-weight:700;}
+.equity-stat-val.pos{color:var(--long);}
+.equity-stat-val.neg{color:var(--short);}
+.equity-stat-val.neu{color:var(--neutral);}
+
+/* ── TRADE PNL MONEY ── */
+.trade-pnl-money{font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;white-space:nowrap;}
+.trade-pnl-money.pos{background:rgba(0,229,160,.1);color:var(--long);}
+.trade-pnl-money.neg{background:rgba(255,68,102,.1);color:var(--short);}
+.trade-pnl-money.neu{background:rgba(245,166,35,.1);color:var(--neutral);}
+.trade-result-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">📡</div>
+      <div class="logo-text">SIGNAL<span>FLOW</span></div>
+    </div>
+    <div class="header-right">
+      <a class="nav-btn" href="liquidaciones.html">💧 Liq</a>
+      <a class="nav-btn" href="index.html">← Volver</a>
+      <button class="nav-btn" id="refreshBtn" onclick="refreshAll()">↻ Actualizar</button>
+      <button class="nav-btn" id="resetBtn" onclick="resetBacktest()" style="border-color:rgba(255,68,102,.4);color:var(--short)">🗑 Restablecer</button>
+    </div>
+  </div>
+  <div class="header-sub" id="lastUpdate">Backtest de señales y combos</div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-label">Filtrar por combo</div>
+  <div class="combo-chips" id="comboChips"></div>
+</div>
+
+<div class="period-bar">
+  <div class="filter-label">Periodo de backtest</div>
+  <div class="combo-chips" id="periodChips"></div>
+  <div class="custom-range" id="customRange">
+    <span>Desde</span><input type="date" id="dateFrom">
+    <span>Hasta</span><input type="date" id="dateTo">
+    <button onclick="applyCustomRange()">Aplicar</button>
+  </div>
+</div>
+
+<!-- ── SIMULATION PANEL ── -->
+<div class="sim-panel" id="simPanel">
+  <div class="filter-label" style="margin-bottom:10px">Simulación de capital</div>
+  <div class="sim-row">
+    <div class="sim-group">
+      <div class="sim-label">Balance inicial</div>
+      <div class="sim-chips" id="balanceChips">
+        <div class="sim-chip active" data-val="1000" onclick="setBalance(1000,this)">$1.000</div>
+        <div class="sim-chip" data-val="5000" onclick="setBalance(5000,this)">$5.000</div>
+        <div class="sim-chip" data-val="10000" onclick="setBalance(10000,this)">$10.000</div>
+        <div class="sim-chip" data-val="custom" onclick="setBalance('custom',this)">✏️ Otro</div>
+      </div>
+      <div class="sim-custom-row" id="balanceCustomRow" style="display:none">
+        <span class="sim-input-prefix">$</span>
+        <input class="sim-input" type="number" id="balanceInput" placeholder="Ej: 2500" min="1" oninput="applyCustomBalance()">
+      </div>
+    </div>
+    <div class="sim-group">
+      <div class="sim-label">Margen por operación</div>
+      <div class="sim-chips" id="marginChips">
+        <div class="sim-chip" data-val="50" onclick="setMargin(50,this)">$50</div>
+        <div class="sim-chip active" data-val="100" onclick="setMargin(100,this)">$100</div>
+        <div class="sim-chip" data-val="250" onclick="setMargin(250,this)">$250</div>
+        <div class="sim-chip" data-val="custom" onclick="setMargin('custom',this)">✏️ Otro</div>
+      </div>
+      <div class="sim-custom-row" id="marginCustomRow" style="display:none">
+        <span class="sim-input-prefix">$</span>
+        <input class="sim-input" type="number" id="marginInput" placeholder="Ej: 500" min="1" oninput="applyCustomMargin()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main" id="mainContent"></div>
+
+<script>
+'use strict';
+
+// ── METADATOS DE COMBOS (deben coincidir con los id/label/name/cls de index.html) ─
+const COMBO_META = [
+  { id:'cazador',    label:'🎯 Cazador',        name:'Cazador de Tendencias',           cls:'c3' },
+  { id:'liqseeker',  label:'🔱 LiqSeeker',       name:'Cazador de Zonas de Liquidación', cls:'c3' },
+  { id:'liqreactor', label:'⚡ LiqReactor',       name:'Reactor a Liquidaciones',         cls:'c0' },
+  { id:'estructura', label:'🏗️ Estructura',      name:'Estructura de Mercado',           cls:'c2' },
+  { id:'intradia',   label:'⚡ Intradía',         name:'Cazador Intradía',                cls:'c5' },
+  { id:'liqhunter',  label:'💧 LiqHunter',        name:'Cazador de Liquidaciones',        cls:'c6' },
+];
+function comboMeta(id){ return COMBO_META.find(c=>c.id===id) || { id, label:id, name:id, cls:'c0' }; }
+
+let activeFilter = 'all'; // 'all' | comboId
+let activePeriod = 'all'; // '1d'|'7d'|'30d'|'90d'|'all'|'custom'
+let customFrom = null, customTo = null; // timestamps ms
+
+// ── SIMULATION STATE ──────────────────────────────────────────────────────────
+// Persistido en localStorage para no perder la configuración al volver a la página
+let _simState = { balance: 1000, balanceMode: '1000', balanceCustom: '', margin: 100, marginMode: '100', marginCustom: '' };
+try { _simState = { ..._simState, ...JSON.parse(localStorage.getItem('sf_sim_state') || '{}') }; } catch(e) {}
+let simBalance = _simState.balance;
+let simMargin  = _simState.margin;
+function saveSimState(){ try{ localStorage.setItem('sf_sim_state', JSON.stringify(_simState)); }catch(e){} }
+
+function initSimPanel(){
+  // Restaura balance
+  const balMode = _simState.balanceMode;
+  document.querySelectorAll('#balanceChips .sim-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.val === balMode);
+  });
+  if(balMode === 'custom'){
+    document.getElementById('balanceCustomRow').style.display = 'flex';
+    document.getElementById('balanceInput').value = _simState.balanceCustom;
+  }
+  // Restaura margen
+  const marMode = _simState.marginMode;
+  document.querySelectorAll('#marginChips .sim-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.val === marMode);
+  });
+  if(marMode === 'custom'){
+    document.getElementById('marginCustomRow').style.display = 'flex';
+    document.getElementById('marginInput').value = _simState.marginCustom;
+  }
+}
+
+function setBalance(val, el){
+  document.querySelectorAll('#balanceChips .sim-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const cr = document.getElementById('balanceCustomRow');
+  _simState.balanceMode = String(val);
+  if(val==='custom'){
+    cr.style.display='flex';
+    const v = parseFloat(document.getElementById('balanceInput').value);
+    if(v>0){ simBalance=v; _simState.balance=v; }
+  } else {
+    cr.style.display='none';
+    simBalance=val; _simState.balance=val;
+    saveSimState();
+    render();
+  }
+}
+function applyCustomBalance(){
+  const v=parseFloat(document.getElementById('balanceInput').value);
+  if(v>0){ simBalance=v; _simState.balance=v; _simState.balanceCustom=String(v); saveSimState(); render(); }
+}
+function setMargin(val, el){
+  document.querySelectorAll('#marginChips .sim-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const cr = document.getElementById('marginCustomRow');
+  _simState.marginMode = String(val);
+  if(val==='custom'){
+    cr.style.display='flex';
+    const v = parseFloat(document.getElementById('marginInput').value);
+    if(v>0){ simMargin=v; _simState.margin=v; }
+  } else {
+    cr.style.display='none';
+    simMargin=val; _simState.margin=val;
+    saveSimState();
+    render();
+  }
+}
+function applyCustomMargin(){
+  const v=parseFloat(document.getElementById('marginInput').value);
+  if(v>0){ simMargin=v; _simState.margin=v; _simState.marginCustom=String(v); saveSimState(); render(); }
+}
+
+const PERIOD_META = [
+  { id:'1d',  label:'24h' },
+  { id:'7d',  label:'7 días' },
+  { id:'30d', label:'30 días' },
+  { id:'90d', label:'90 días' },
+  { id:'all', label:'Todo' },
+  { id:'custom', label:'📅 Personalizado' },
+];
+function periodRangeMs(id){
+  const now = Date.now();
+  const day = 24*60*60*1000;
+  if(id==='1d') return [now-1*day, now];
+  if(id==='7d') return [now-7*day, now];
+  if(id==='30d') return [now-30*day, now];
+  if(id==='90d') return [now-90*day, now];
+  if(id==='custom') return [customFrom ?? 0, customTo ?? now];
+  return [0, now]; // 'all'
+}
+
+function fmt(n){
+  if(n==null||isNaN(n))return'—';
+  const a=Math.abs(n);
+  if(a>=10000)return n.toLocaleString('es-ES',{maximumFractionDigits:0});
+  if(a>=1000)return n.toLocaleString('es-ES',{maximumFractionDigits:1});
+  if(a>=100)return n.toFixed(1);
+  if(a>=1)return n.toFixed(2);
+  if(a>=0.01)return n.toFixed(4);
+  return n.toFixed(6);
+}
+function fmtPct(n){ if(n==null||isNaN(n)) return '—'; return (n>=0?'+':'')+n.toFixed(2)+'%'; }
+function fmtDate(ts){
+  if(!ts) return '—';
+  const d=new Date(ts);
+  try{
+    const parts=new Intl.DateTimeFormat('es-CU',{timeZone:'America/Havana',hour:'2-digit',minute:'2-digit',hour12:false,day:'2-digit',month:'2-digit'}).formatToParts(d);
+    const get=t=>parts.find(p=>p.type===t)?.value||'--';
+    return `${get('day')}/${get('month')} ${get('hour')}:${get('minute')}`;
+  }catch(e){ return d.toLocaleString('es-ES'); }
+}
+
+// ── CARGA DE DATOS (la misma localStorage que usa index.html) ───────────────
+function loadSignalHistory(){ try{ return JSON.parse(localStorage.getItem('sf_signal_history')||'{}'); }catch(e){ return {}; } }
+function loadCache(){ try{ return JSON.parse(localStorage.getItem('sf_cache')||'{}'); }catch(e){ return {}; } }
+
+// ── CONSTRUCCIÓN DE "TRADES" A PARTIR DEL HISTORIAL DE SEÑALES CONFIRMADAS ───
+// Cada vez que index.html confirma un cambio real de señal, guarda un evento
+// {signal, score, price, ts}. Tratamos cada evento LONG/SHORT como la apertura
+// de una operación simulada: se "cierra" en el precio del SIGUIENTE evento de
+// ese mismo ticker+combo (el momento en que la señal cambió de verdad). Si el
+// evento es el último registrado, la operación sigue "abierta" y se valora
+// con el último precio conocido (caché en vivo) solo a título informativo —
+// no cuenta para el win rate hasta que se cierre.
+function buildTrades(){
+  const history = loadSignalHistory();
+  const cache = loadCache();
+  const trades = [];
+  Object.keys(history).forEach(ticker=>{
+    Object.keys(history[ticker]).forEach(comboId=>{
+      const events = history[ticker][comboId] || [];
+      for(let i=0;i<events.length;i++){
+        const ev = events[i];
+        if(ev.signal!=='LONG' && ev.signal!=='SHORT') continue;
+        if(ev.price==null) continue;
+        const next = events[i+1];
+        const closed = !!(next && next.price!=null);
+        const exitPrice = closed ? next.price : (cache[ticker]?.price ?? null);
+        const exitTs = closed ? next.ts : null;
+        let pct = null, win = null;
+        if(exitPrice!=null){
+          pct = ev.signal==='LONG'
+            ? (exitPrice-ev.price)/ev.price*100
+            : (ev.price-exitPrice)/ev.price*100;
+          win = pct>0;
+        }
+        trades.push({
+          ticker, comboId, dir:ev.signal,
+          entryPrice:ev.price, entryTs:ev.ts, score:ev.score,
+          exitPrice, exitTs, closed: closed, pct, win,
+        });
+      }
+    });
+  });
+  trades.sort((a,b)=>b.entryTs-a.entryTs);
+  return trades;
+}
+
+function statsFor(trades){
+  const closed = trades.filter(t=>t.closed);
+  const open = trades.filter(t=>!t.closed);
+  const wins = closed.filter(t=>t.win);
+  const losses = closed.filter(t=>!t.win);
+  const winRate = closed.length ? (wins.length/closed.length*100) : null;
+  const avgPct = closed.length ? (closed.reduce((s,t)=>s+t.pct,0)/closed.length) : null;
+  return { total:closed.length, wins:wins.length, losses:losses.length, winRate, avgPct, open: open.length };
+}
+
+// ── MÉTRICAS AVANZADAS DE BACKTEST ──────────────────────────────────────────
+function advancedStats(trades, balance, margin){
+  const closed = trades.filter(t=>t.closed).slice().sort((a,b)=>a.entryTs-b.entryTs);
+  if(closed.length===0){
+    return { profitFactor:null, expectancy:null, maxDD:null, maxDDMoney:null,
+             bestTrade:null, worstTrade:null, streak:0, streakType:null,
+             totalReturn:null, totalPnl:null, peakBalance:null, valleyBalance:null,
+             curve:[], curveBalances:[], avgWin:null, avgLoss:null };
+  }
+  const wins = closed.filter(t=>t.win);
+  const losses = closed.filter(t=>!t.win);
+  const grossWin = wins.reduce((s,t)=>s+t.pct,0);
+  const grossLoss = Math.abs(losses.reduce((s,t)=>s+t.pct,0));
+  const profitFactor = grossLoss>0 ? grossWin/grossLoss : (grossWin>0 ? Infinity : null);
+  const avgWin = wins.length ? grossWin/wins.length : null;
+  const avgLoss = losses.length ? -grossLoss/losses.length : null;
+  const expectancy = closed.reduce((s,t)=>s+t.pct,0)/closed.length;
+
+  // Curva de equity: cada trade mueve el capital por (pct * margin / 100)
+  let cap = balance;
+  let peak = balance, valley = balance, maxDD = 0, maxDDMoney = 0;
+  const curveBalances = [balance]; // starts at initial
+  const curve = [100]; // normalized
+  closed.forEach(t=>{
+    const pnl = (t.pct / 100) * margin;
+    cap += pnl;
+    curveBalances.push(cap);
+    curve.push((cap / balance) * 100);
+    if(cap > peak){ peak = cap; }
+    if(cap < valley){ valley = cap; }
+    const dd = peak > 0 ? (peak - cap) / peak * 100 : 0;
+    const ddMoney = peak - cap;
+    if(dd > maxDD){ maxDD = dd; }
+    if(ddMoney > maxDDMoney){ maxDDMoney = ddMoney; }
+  });
+  const totalReturn = (cap / balance - 1) * 100;
+  const totalPnl = cap - balance;
+
+  const bestTrade = closed.reduce((a,b)=>(a==null||b.pct>a.pct)?b:a, null);
+  const worstTrade = closed.reduce((a,b)=>(a==null||b.pct<a.pct)?b:a, null);
+
+  let streak=0, streakType=null;
+  for(let i=closed.length-1;i>=0;i--){
+    const isWin=closed[i].win;
+    if(streak===0){ streakType=isWin?'win':'loss'; streak=1; }
+    else if((isWin&&streakType==='win')||(!isWin&&streakType==='loss')) streak++;
+    else break;
+  }
+
+  return { profitFactor, expectancy, maxDD, maxDDMoney, bestTrade, worstTrade,
+           streak, streakType, totalReturn, totalPnl, peakBalance: peak, valleyBalance: valley,
+           curve, curveBalances, avgWin, avgLoss };
+}
+
+function fmtRatio(n){ if(n==null) return '—'; if(n===Infinity) return '∞'; return n.toFixed(2); }
+function fmtMoney(n){ if(n==null||isNaN(n)) return '—'; const s=n<0?'-':''; return s+'$'+Math.abs(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function equityChart(curveBalances, balance, totalPnl, maxDDMoney){
+  if(!curveBalances || curveBalances.length<2){
+    return '<div style="font-size:9px;color:var(--muted);text-align:center;padding:20px 0">No hay suficientes operaciones para curva de equity</div>';
+  }
+  const W=320, H=90, PL=48, PR=10, PT=10, PB=20;
+  const cw=W-PL-PR, ch=H-PT-PB;
+  const min=Math.min(...curveBalances), max=Math.max(...curveBalances);
+  const range=(max-min)||1;
+  const xOf=i=>PL+(i/(curveBalances.length-1))*cw;
+  const yOf=v=>PT+ch-((v-min)/range)*ch;
+
+  // baseline y (initial balance)
+  const baselineY = yOf(balance);
+
+  // Build fill above/below baseline
+  const pts = curveBalances.map((v,i)=>`${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(' ');
+
+  // Profit fill (above baseline) — green
+  // Loss fill (below baseline) — red
+  // We use clipPath trick: two polygons, one clipped above baseline, one below
+  const linePoints = curveBalances.map((v,i)=>[xOf(i),yOf(v)]);
+  const first=linePoints[0], last=linePoints[linePoints.length-1];
+
+  // polygon for fill: line + close bottom
+  const polyPts = linePoints.map(p=>`${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const fillPolyGain = polyPts + ` ${last[0].toFixed(1)},${baselineY.toFixed(1)} ${first[0].toFixed(1)},${baselineY.toFixed(1)}`;
+  const fillPolyLoss = polyPts + ` ${last[0].toFixed(1)},${baselineY.toFixed(1)} ${first[0].toFixed(1)},${baselineY.toFixed(1)}`;
+
+  // Y-axis labels
+  const yLabels=[];
+  const steps=3;
+  for(let s=0;s<=steps;s++){
+    const v=min+(range/steps)*s;
+    const y=yOf(v);
+    yLabels.push({v,y});
+  }
+
+  const isPos=(totalPnl??0)>=0;
+  const lineColor=isPos?'var(--long)':'var(--short)';
+
+  // Peak and valley markers
+  const peakVal=Math.max(...curveBalances);
+  const valleyVal=Math.min(...curveBalances);
+  const peakIdx=curveBalances.indexOf(peakVal);
+  const valleyIdx=curveBalances.indexOf(valleyVal);
+  const peakX=xOf(peakIdx), peakY=yOf(peakVal);
+  const valleyX=xOf(valleyIdx), valleyY=yOf(valleyVal);
+
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;overflow:visible">
+    <defs>
+      <clipPath id="clipAbove">
+        <rect x="${PL}" y="${PT}" width="${cw}" height="${Math.max(0,baselineY-PT)}"/>
+      </clipPath>
+      <clipPath id="clipBelow">
+        <rect x="${PL}" y="${baselineY}" width="${cw}" height="${Math.max(0,PT+ch-baselineY)}"/>
+      </clipPath>
+      <linearGradient id="gainGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(0,229,160,0.25)"/>
+        <stop offset="100%" stop-color="rgba(0,229,160,0.02)"/>
+      </linearGradient>
+      <linearGradient id="lossGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(255,68,102,0.04)"/>
+        <stop offset="100%" stop-color="rgba(255,68,102,0.22)"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Y axis labels -->
+    ${yLabels.map(l=>`
+      <text x="${PL-4}" y="${l.y.toFixed(1)}" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="7" fill="rgba(90,98,120,0.9)" dominant-baseline="middle">$${Math.round(l.v).toLocaleString('es-ES')}</text>
+      <line x1="${PL}" y1="${l.y.toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${l.y.toFixed(1)}" stroke="rgba(31,36,53,0.8)" stroke-width="1"/>
+    `).join('')}
+
+    <!-- Baseline (initial balance) -->
+    <line x1="${PL}" y1="${baselineY.toFixed(1)}" x2="${(PL+cw).toFixed(1)}" y2="${baselineY.toFixed(1)}" stroke="rgba(90,98,120,0.5)" stroke-width="1" stroke-dasharray="3,3"/>
+
+    <!-- Gain fill (above baseline) -->
+    <polygon points="${fillPolyGain}" fill="url(#gainGrad)" clip-path="url(#clipAbove)"/>
+    <!-- Loss fill (below baseline) -->
+    <polygon points="${fillPolyLoss}" fill="url(#lossGrad)" clip-path="url(#clipBelow)"/>
+
+    <!-- Equity line -->
+    <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linejoin="round"/>
+
+    <!-- Peak dot -->
+    ${peakVal>balance?`<circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="3" fill="var(--long)" opacity="0.9"/>
+    <text x="${Math.min(peakX+4,W-PR-2).toFixed(1)}" y="${Math.max(peakY-5,PT+7).toFixed(1)}" font-family="IBM Plex Mono,monospace" font-size="7" fill="var(--long)" opacity="0.85">▲$${Math.round(peakVal).toLocaleString('es-ES')}</text>`:''}
+
+    <!-- Valley dot -->
+    ${valleyVal<balance?`<circle cx="${valleyX.toFixed(1)}" cy="${valleyY.toFixed(1)}" r="3" fill="var(--short)" opacity="0.9"/>
+    <text x="${Math.min(valleyX+4,W-PR-2).toFixed(1)}" y="${Math.min(valleyY+12,H-2).toFixed(1)}" font-family="IBM Plex Mono,monospace" font-size="7" fill="var(--short)" opacity="0.85">▼$${Math.round(valleyVal).toLocaleString('es-ES')}</text>`:''}
+
+    <!-- Last point dot -->
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="${lineColor}" opacity="1"/>
+  </svg>`;
+}
+
+function wrClass(wr){ if(wr==null) return 'mid'; if(wr>=55) return 'good'; if(wr<45) return 'bad'; return 'mid'; }
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const rawTrades = buildTrades();
+  const [pFrom, pTo] = periodRangeMs(activePeriod);
+  const allTrades = rawTrades.filter(t=> t.entryTs>=pFrom && t.entryTs<=pTo);
+  const trades = activeFilter==='all' ? allTrades : allTrades.filter(t=>t.comboId===activeFilter);
+  const main = document.getElementById('mainContent');
+
+  if(allTrades.length===0){
+    const filteredButEmpty = rawTrades.length>0 && activePeriod!=='all';
+    main.innerHTML = filteredButEmpty ? `<div class="empty-state">
+      <div class="empty-icon">🗓️</div>
+      <div class="empty-title">Sin operaciones en este periodo</div>
+      <div class="empty-sub">Hay ${rawTrades.length} operación(es) registradas en total, pero ninguna<br>
+      cae dentro del rango seleccionado. Prueba con "Todo" o amplía el rango.</div>
+    </div>` : `<div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">Aún no hay historial suficiente</div>
+      <div class="empty-sub">El backtest se construye con las señales CONFIRMADAS que SignalFlow<br>
+      va generando a partir de ahora. Deja la app principal abierta y refrescando<br>
+      (o vuelve a entrar más tarde) — esta página se irá llenando sola.</div>
+    </div>`;
+    document.getElementById('lastUpdate').textContent = 'Backtest de señales y combos · sin datos aún';
+    return;
+  }
+
+  const overall = statsFor(trades);
+  const adv = advancedStats(trades, simBalance, simMargin);
+  const wr = overall.winRate;
+  const wrLossPct = wr==null ? 0 : (100-wr);
+
+  // Stats por combo (siempre sobre TODOS los trades, no solo el filtro, para
+  // poder comparar combos entre sí aunque se esté filtrando por uno)
+  const byCombo = COMBO_META.map(c=>({ meta:c, stats: statsFor(allTrades.filter(t=>t.comboId===c.id)) }))
+    .filter(r=>r.stats.total>0 || r.stats.open>0);
+
+  // Stats por ticker (sobre el conjunto filtrado)
+  const tickers = [...new Set(trades.map(t=>t.ticker))];
+  const byTicker = tickers.map(tk=>({ ticker:tk, stats: statsFor(trades.filter(t=>t.ticker===tk)) }))
+    .sort((a,b)=> (b.stats.winRate??-1) - (a.stats.winRate??-1));
+
+  const bestCombo = byCombo.filter(r=>r.stats.total>=3).sort((a,b)=>(b.stats.winRate??-1)-(a.stats.winRate??-1))[0];
+
+  main.innerHTML = `
+    <div class="note-box">📌 <b>Cómo se calcula:</b> cada señal LONG/SHORT confirmada se trata como una operación simulada que se "cierra" cuando ese combo cambia de señal. El % es la variación de precio entre la entrada y el cierre (a favor o en contra de la dirección). Las operaciones aún abiertas se muestran aparte y no afectan al win rate.</div>
+
+    <div class="section-eyebrow">Resumen ${activeFilter==='all'?'general':'· '+comboMeta(activeFilter).name}</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-card-label">Operaciones cerradas</div>
+        <div class="summary-card-val">${overall.total}</div>
+        <div class="summary-card-sub">${overall.open} abierta${overall.open===1?'':'s'} ahora mismo</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Retorno medio / op.</div>
+        <div class="summary-card-val ${overall.avgPct==null?'':(overall.avgPct>=0?'long':'short')}">${overall.avgPct==null?'—':fmtPct(overall.avgPct)}</div>
+        <div class="summary-card-sub">Ganadas ${overall.wins} · Perdidas ${overall.losses}</div>
+      </div>
+    </div>
+
+    <div class="wr-card">
+      <div class="wr-top">
+        <div class="wr-title">Win Rate</div>
+        <div class="wr-pct ${wrClass(wr)==='good'?'':''}" style="color:${wr==null?'var(--muted)':wr>=55?'var(--long)':wr<45?'var(--short)':'var(--neutral)'}">${wr==null?'—':wr.toFixed(1)+'%'}</div>
+      </div>
+      <div class="wr-bar-wrap">
+        ${wr==null?'':`<div class="wr-bar-win" style="width:${wr}%"></div><div class="wr-bar-loss" style="width:${wrLossPct}%"></div>`}
+      </div>
+    </div>
+
+    <div class="section-eyebrow">Curva de equity · margen $${simMargin.toLocaleString('es-ES')} / op.</div>
+    <div class="equity-card">
+      <div class="equity-header">
+        <div>
+          <div class="equity-title">Capital simulado</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px">Inicio: <b style="color:var(--text)">$${simBalance.toLocaleString('es-ES')}</b></div>
+        </div>
+        <div style="text-align:right">
+          <div class="equity-return" style="color:${adv.totalPnl==null?'var(--muted)':adv.totalPnl>=0?'var(--long)':'var(--short)'}">${adv.totalPnl==null?'—':fmtMoney(adv.totalPnl)}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:${adv.totalReturn==null?'var(--muted)':adv.totalReturn>=0?'var(--long)':'var(--short)'};margin-top:1px">${adv.totalReturn==null?'—':fmtPct(adv.totalReturn)}</div>
+        </div>
+      </div>
+      <div class="equity-chart-wrap">
+        ${equityChart(adv.curveBalances, simBalance, adv.totalPnl, adv.maxDDMoney)}
+      </div>
+      <div class="equity-footer">
+        <div class="equity-stat">
+          <div class="equity-stat-label">Balance final</div>
+          <div class="equity-stat-val ${adv.totalPnl==null?'neu':adv.totalPnl>=0?'pos':'neg'}">${adv.curveBalances&&adv.curveBalances.length>1?fmtMoney(adv.curveBalances[adv.curveBalances.length-1]):'—'}</div>
+        </div>
+        <div class="equity-stat">
+          <div class="equity-stat-label">Pico máximo</div>
+          <div class="equity-stat-val pos">${adv.peakBalance?fmtMoney(adv.peakBalance):'—'}</div>
+        </div>
+        <div class="equity-stat">
+          <div class="equity-stat-label">Max. drawdown</div>
+          <div class="equity-stat-val neg">${adv.maxDDMoney?'-'+fmtMoney(adv.maxDDMoney).replace('$','')+'  ('+adv.maxDD.toFixed(1)+'%)':'—'}</div>
+        </div>
+        <div class="equity-stat">
+          <div class="equity-stat-label">Valle mínimo</div>
+          <div class="equity-stat-val neg">${adv.valleyBalance?fmtMoney(adv.valleyBalance):'—'}</div>
+        </div>
+        <div class="equity-stat">
+          <div class="equity-stat-label">Ganancia bruta</div>
+          <div class="equity-stat-val pos">${adv.avgWin!=null&&overall.wins>0?fmtMoney((adv.avgWin/100)*simMargin*overall.wins):'—'}</div>
+        </div>
+        <div class="equity-stat">
+          <div class="equity-stat-label">Pérdida bruta</div>
+          <div class="equity-stat-val neg">${adv.avgLoss!=null&&overall.losses>0?fmtMoney((adv.avgLoss/100)*simMargin*overall.losses):'—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-eyebrow">Métricas avanzadas</div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-card-label">Profit Factor</div>
+        <div class="summary-card-val ${adv.profitFactor==null?'':(adv.profitFactor>=1?'long':'short')}">${fmtRatio(adv.profitFactor)}</div>
+        <div class="summary-card-sub">Ganancia bruta / pérdida bruta</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Drawdown máximo</div>
+        <div class="summary-card-val ${adv.maxDD==null?'':'short'}">${adv.maxDD==null?'—':'-'+adv.maxDD.toFixed(2)+'%'}</div>
+        <div class="summary-card-sub">${adv.maxDDMoney?'≈ -'+fmtMoney(adv.maxDDMoney).replace('-',''):'Mayor caída desde un pico de equity'}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Ganancia media</div>
+        <div class="summary-card-val long">${adv.avgWin==null?'—':fmtPct(adv.avgWin)}</div>
+        <div class="summary-card-sub">Promedio de operaciones ganadas</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Pérdida media</div>
+        <div class="summary-card-val short">${adv.avgLoss==null?'—':fmtPct(adv.avgLoss)}</div>
+        <div class="summary-card-sub">Promedio de operaciones perdidas</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Mejor operación</div>
+        <div class="summary-card-val long">${adv.bestTrade?fmtPct(adv.bestTrade.pct):'—'}</div>
+        <div class="summary-card-sub">${adv.bestTrade?`${adv.bestTrade.ticker} · ${comboMeta(adv.bestTrade.comboId).label}`:'—'}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Peor operación</div>
+        <div class="summary-card-val short">${adv.worstTrade?fmtPct(adv.worstTrade.pct):'—'}</div>
+        <div class="summary-card-sub">${adv.worstTrade?`${adv.worstTrade.ticker} · ${comboMeta(adv.worstTrade.comboId).label}`:'—'}</div>
+      </div>
+      <div class="summary-card" style="grid-column:1/-1">
+        <div class="summary-card-label">Racha actual</div>
+        <div class="summary-card-val ${adv.streakType==='win'?'long':adv.streakType==='loss'?'short':''}">${adv.streak>0?adv.streak+' '+(adv.streakType==='win'?'ganadas seguidas ✅':'perdidas seguidas ❌'):'—'}</div>
+      </div>
+    </div>
+
+    ${bestCombo?`<div class="note-box" style="margin-top:8px">🏆 <b>Mejor combo (mín. 3 operaciones):</b> ${bestCombo.meta.name} — ${bestCombo.stats.winRate.toFixed(1)}% win rate (${bestCombo.stats.wins}/${bestCombo.stats.total})</div>`:''}
+
+    <div class="section-eyebrow">Win rate por combo</div>
+    <div class="bt-table">
+      <div class="bt-row head"><span>Combo</span><span style="text-align:right">Trades</span><span style="text-align:right">Retorno</span><span style="text-align:right">Win Rate</span></div>
+      ${byCombo.length? byCombo.map(r=>`
+        <div class="bt-row">
+          <div class="bt-name">${r.meta.label}</div>
+          <div class="bt-num">${r.stats.total}${r.stats.open?` <span style="color:var(--muted)">(+${r.stats.open})</span>`:''}</div>
+          <div class="bt-num">${r.stats.avgPct==null?'—':fmtPct(r.stats.avgPct)}</div>
+          <div class="bt-wr ${wrClass(r.stats.winRate)}">${r.stats.winRate==null?'—':r.stats.winRate.toFixed(1)+'%'}</div>
+        </div>`).join('') : `<div class="bt-row"><span style="color:var(--muted);font-size:10px">Sin datos todavía</span></div>`}
+    </div>
+
+    <div class="section-eyebrow">Win rate por activo ${activeFilter!=='all'?'· '+comboMeta(activeFilter).name:''}</div>
+    <div class="bt-table">
+      <div class="bt-row head"><span>Activo</span><span style="text-align:right">Trades</span><span style="text-align:right">Retorno</span><span style="text-align:right">Win Rate</span></div>
+      ${byTicker.length? byTicker.map(r=>`
+        <div class="bt-row">
+          <div class="bt-name">${r.ticker}</div>
+          <div class="bt-num">${r.stats.total}${r.stats.open?` <span style="color:var(--muted)">(+${r.stats.open})</span>`:''}</div>
+          <div class="bt-num">${r.stats.avgPct==null?'—':fmtPct(r.stats.avgPct)}</div>
+          <div class="bt-wr ${wrClass(r.stats.winRate)}">${r.stats.winRate==null?'—':r.stats.winRate.toFixed(1)+'%'}</div>
+        </div>`).join('') : `<div class="bt-row"><span style="color:var(--muted);font-size:10px">Sin datos todavía</span></div>`}
+    </div>
+
+    <div class="section-eyebrow">Historial de operaciones ${activeFilter!=='all'?'· '+comboMeta(activeFilter).name:''}</div>
+    <div class="trade-list">
+      ${trades.slice(0,60).map(t=>{
+        const meta=comboMeta(t.comboId);
+        const resultCls = !t.closed ? 'open' : (t.win?'win':'loss');
+        const resultLbl = !t.closed ? '⏳ Abierta' : (t.win?'✅ Ganada':'❌ Perdida');
+        const pnlMoney = t.pct!=null ? (t.pct/100)*simMargin : null;
+        const pnlMoneyCls = pnlMoney==null?'neu':pnlMoney>=0?'pos':'neg';
+        return `<div class="trade-item ${resultCls}">
+          <div class="trade-top">
+            <div class="trade-id">
+              <span class="trade-dir ${t.dir}">${t.dir}</span>
+              <span>${t.ticker}</span>
+              <span class="trade-combo">${meta.label}</span>
+            </div>
+            <div class="trade-result-row">
+              ${pnlMoney!=null?`<span class="trade-pnl-money ${pnlMoneyCls}">${fmtMoney(pnlMoney)}</span>`:''}
+              <div class="trade-result ${resultCls}">${resultLbl}${t.pct!=null?' · '+fmtPct(t.pct):''}</div>
+            </div>
+          </div>
+          <div class="trade-meta">
+            <span>Entrada: <b>${fmt(t.entryPrice)}</b> · ${fmtDate(t.entryTs)}</span>
+            <span>${t.closed?`Salida: <b>${fmt(t.exitPrice)}</b> · ${fmtDate(t.exitTs)}`:`Precio actual: <b>${t.exitPrice!=null?fmt(t.exitPrice):'—'}</b>`}</span>
+          </div>
+        </div>`;
+      }).join('') || `<div class="empty-sub" style="text-align:center;padding:20px">Sin operaciones para este filtro</div>`}
+    </div>
+  `;
+
+  document.getElementById('lastUpdate').textContent = `Backtest · ${allTrades.filter(t=>t.closed).length} operaciones cerradas (${PERIOD_META.find(p=>p.id===activePeriod)?.label||'Todo'}) · actualizado ${new Date().toLocaleTimeString('es-ES')}`;
+}
+
+function buildComboChips(){
+  const wrap = document.getElementById('comboChips');
+  const chips = [{id:'all', label:'Todos', cls:'c0'}, ...COMBO_META];
+  wrap.innerHTML = chips.map(c=>`<div class="combo-chip ${c.cls} ${activeFilter===c.id?'active '+c.cls:''}" onclick="setFilter('${c.id}')">${c.label}</div>`).join('');
+}
+function buildPeriodChips(){
+  const wrap = document.getElementById('periodChips');
+  wrap.innerHTML = PERIOD_META.map(p=>`<div class="combo-chip ${activePeriod===p.id?'active c0':''}" onclick="setPeriod('${p.id}')">${p.label}</div>`).join('');
+  const cr = document.getElementById('customRange');
+  cr.classList.toggle('show', activePeriod==='custom');
+}
+function setFilter(id){ activeFilter=id; buildComboChips(); render(); }
+function setPeriod(id){
+  activePeriod=id;
+  buildPeriodChips();
+  if(id!=='custom') render();
+}
+function applyCustomRange(){
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+  customFrom = from ? new Date(from+'T00:00:00').getTime() : 0;
+  customTo = to ? new Date(to+'T23:59:59').getTime() : Date.now();
+  render();
+}
+function refreshAll(){ render(); }
+function resetBacktest(){
+  if(!confirm('¿Restablecer el backtest? Esto borrará todo el historial de señales registradas (sf_signal_history) y el estado de confirmación de señales (sf_signaltimes). Esta acción no se puede deshacer.')) return;
+  try{
+    localStorage.removeItem('sf_signal_history');
+    localStorage.removeItem('sf_signaltimes');
+  }catch(e){}
+  activeFilter='all'; activePeriod='all'; customFrom=null; customTo=null;
+  buildComboChips(); buildPeriodChips(); render();
+}
+
+buildComboChips();
+buildPeriodChips();
+initSimPanel();
+render();
+// Si el usuario vuelve a esta pestaña tras haber dejado la app principal
+// generando señales en otra pestaña, refrescamos solos.
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') render(); });
+
+// ── NOTIFICACIONES DE LIQUIDACIONES GLOBALES ──────────────────────────────────
+let _btToastTimer=null;
+function _btShowToast(msg,type='info'){
+  let t=document.getElementById('_btToast');
+  if(!t){t=document.createElement('div');t.id='_btToast';t.style.cssText='position:fixed;top:16px;right:16px;background:#1a1e2a;border:1px solid #262c3d;border-radius:10px;padding:10px 14px;font-size:12px;z-index:999;max-width:240px;transform:translateX(120%);transition:transform .3s ease;font-family:IBM Plex Mono,monospace;color:#e2e8f4;';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.style.borderColor=type==='success'?'#00e5a0':type==='error'?'#ff4466':'#5b6ef5';
+  t.style.transform='translateX(0)';
+  clearTimeout(_btToastTimer);_btToastTimer=setTimeout(()=>{t.style.transform='translateX(120%)';},3500);
+}
+let _btSeenLiq=new Set();
+try{_btSeenLiq=new Set(JSON.parse(localStorage.getItem('sf_seen_liq_bcast_bt')||'[]'));}catch(e){}
+function _btCheckLiq(){
+  try{
+    const events=JSON.parse(localStorage.getItem('sf_liq_broadcast')||'[]');
+    const cutoff=Date.now()-3600000; let changed=false;
+    events.filter(e=>e.time>cutoff).forEach(ev=>{
+      if(_btSeenLiq.has(ev.key)) return;
+      _btSeenLiq.add(ev.key); changed=true;
+      const isLong=ev.side.includes('Long');
+      const fmtU=v=>v>=1e9?'$'+(v/1e9).toFixed(2)+'B':v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1e3?'$'+(v/1e3).toFixed(2)+'K':'$'+v.toFixed(0);
+      const fmtP=p=>p>=1000?p.toLocaleString('es-ES',{maximumFractionDigits:2}):p>=1?p.toFixed(4):p.toFixed(6);
+      _btShowToast(`💥 Liq ${ev.ticker}: ${ev.side} ${fmtU(ev.amount)} @ ${fmtP(ev.price)}`, isLong?'success':'error');
+      if('Notification' in window && Notification.permission==='granted'){
+        try{ new Notification(`💥 Liquidación ${ev.ticker}`,{body:`${ev.side}: ${fmtU(ev.amount)} @ ${fmtP(ev.price)}`,tag:ev.key});}catch(e){}
+      }
+    });
+    if(changed) try{localStorage.setItem('sf_seen_liq_bcast_bt',JSON.stringify([..._btSeenLiq].slice(-200)));}catch(e){}
+  }catch(e){}
+}
+_btCheckLiq();
+setInterval(_btCheckLiq, 20000);
+window.addEventListener('storage', e=>{ if(e.key==='sf_liq_broadcast') _btCheckLiq(); });
+</script>
+</body>
+</html>
